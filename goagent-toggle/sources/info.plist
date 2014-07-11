@@ -1,0 +1,194 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>bundleid</key>
+	<string>info.wangyg.goagent.toggle</string>
+	<key>category</key>
+	<string>Internet</string>
+	<key>connections</key>
+	<dict>
+		<key>6C68D0BB-A89A-4FDD-BB99-B5A5B460646E</key>
+		<array>
+			<dict>
+				<key>destinationuid</key>
+				<string>AF7992A2-CCFA-446D-AC7E-665DBE603BF7</string>
+				<key>modifiers</key>
+				<integer>0</integer>
+				<key>modifiersubtext</key>
+				<string></string>
+			</dict>
+		</array>
+		<key>AF7992A2-CCFA-446D-AC7E-665DBE603BF7</key>
+		<array>
+			<dict>
+				<key>destinationuid</key>
+				<string>46DE56A6-9D91-4CFA-B396-9A35D01B9543</string>
+				<key>modifiers</key>
+				<integer>0</integer>
+				<key>modifiersubtext</key>
+				<string></string>
+			</dict>
+		</array>
+	</dict>
+	<key>createdby</key>
+	<string>wangyg</string>
+	<key>description</key>
+	<string>Toggle GoAgent proxy with specified network inferface globally</string>
+	<key>disabled</key>
+	<false/>
+	<key>name</key>
+	<string>GoAgent Toggle</string>
+	<key>objects</key>
+	<array>
+		<dict>
+			<key>config</key>
+			<dict>
+				<key>lastpathcomponent</key>
+				<false/>
+				<key>onlyshowifquerypopulated</key>
+				<true/>
+				<key>output</key>
+				<integer>0</integer>
+				<key>removeextension</key>
+				<false/>
+				<key>sticky</key>
+				<false/>
+				<key>text</key>
+				<string>{query}</string>
+				<key>title</key>
+				<string>GoAgent Toggle</string>
+			</dict>
+			<key>type</key>
+			<string>alfred.workflow.output.notification</string>
+			<key>uid</key>
+			<string>46DE56A6-9D91-4CFA-B396-9A35D01B9543</string>
+			<key>version</key>
+			<integer>0</integer>
+		</dict>
+		<dict>
+			<key>config</key>
+			<dict>
+				<key>argumenttype</key>
+				<integer>1</integer>
+				<key>escaping</key>
+				<integer>127</integer>
+				<key>keyword</key>
+				<string>goagent</string>
+				<key>script</key>
+				<string>sh findAllNetworkservices.sh "{query}"</string>
+				<key>subtext</key>
+				<string>turn on/off GoAgent proxy on specified internet interface globally</string>
+				<key>title</key>
+				<string>GoAgent Toggle</string>
+				<key>type</key>
+				<integer>0</integer>
+				<key>withspace</key>
+				<true/>
+			</dict>
+			<key>type</key>
+			<string>alfred.workflow.input.scriptfilter</string>
+			<key>uid</key>
+			<string>6C68D0BB-A89A-4FDD-BB99-B5A5B460646E</string>
+			<key>version</key>
+			<integer>0</integer>
+		</dict>
+		<dict>
+			<key>config</key>
+			<dict>
+				<key>escaping</key>
+				<integer>127</integer>
+				<key>script</key>
+				<string>NETWORKSERVICE=$(echo {query} | awk -F: '{print $1}')
+ACTION=$(echo {query} | awk -F: '{print $2}')
+
+USER=$(Authenticate.app/Contents/MacOS/Authenticate -get username)
+PASS=$(Authenticate.app/Contents/MacOS/Authenticate -get password)
+
+if ([ -z $USER ] || [ $USER = "null" ]) &amp;&amp; ([ -z $PASS] || [$PASS = "null" ]); then
+  Authenticate.app/Contents/MacOS/Authenticate
+else
+  if [ $ACTION = "on" ]; then
+    echo $PASS | sudo -S networksetup -setwebproxy "$NETWORKSERVICE" 127.0.0.1 8087
+    echo $PASS | sudo -S networksetup -setsecurewebproxy "$NETWORKSERVICE" 127.0.0.1 8087
+    echo $PASS | sudo -S networksetup -setwebproxystate "$NETWORKSERVICE" on
+    echo $PASS | sudo -S networksetup -setsecurewebproxystate "$NETWORKSERVICE" on
+
+    WEB_PROXY_ENABLED=$(networksetup -getwebproxy "$NETWORKSERVICE" | grep "^Enabled" | awk -F: '{print $2}' | sed -e 's/ //g')
+
+    if [ $WEB_PROXY_ENABLED = "Yes" ]; then
+      SERVER=$(networksetup -getwebproxy "$NETWORKSERVICE" | grep "^Server" | awk -F: '{print $2}' | sed -e 's/ //g')
+      PORT=$(networksetup -getwebproxy "$NETWORKSERVICE" | grep "^Port" | awk -F: '{print $2}' | sed -e 's/ //g')
+      echo "WebProxy On: $SERVER:$PORT"
+    else
+      echo "Turn on WebProxy failed!"
+    fi
+
+    SECURE_WEB_PROXY_ENABLED=$(networksetup -getsecurewebproxy "$NETWORKSERVICE" | grep "^Enabled" | awk -F: '{print $2}' | sed -e 's/ //g')
+
+    if [ $SECURE_WEB_PROXY_ENABLED = "Yes" ]; then
+      SECURE_SERVER=$(networksetup -getsecurewebproxy "$NETWORKSERVICE" | grep "^Server" | awk -F: '{print $2}' | sed -e 's/ //g')
+      SECURE_PORT=$(networksetup -getsecurewebproxy "$NETWORKSERVICE" | grep "^Port" | awk -F: '{print $2}' | sed -e 's/ //g')
+      echo "SecureWebProxy On: $SECURE_SERVER:$SECURE_PORT"
+    else
+      echo "Turn on SecureWebProxy failed!"
+    fi
+
+    elif [ $ACTION = "off" ]; then
+      echo $PASS | sudo -S networksetup -setwebproxystate "$NETWORKSERVICE" off
+      echo $PASS | sudo -S networksetup -setsecurewebproxystate "$NETWORKSERVICE" off
+
+      WEB_PROXY_ENABLED=$(networksetup -getwebproxy "$NETWORKSERVICE" | grep "^Enabled" | awk -F: '{print $2}' | sed -e 's/ //g')
+
+      SECURE_WEB_PROXY_ENABLED=$(networksetup -getsecurewebproxy "$NETWORKSERVICE" | grep "^Enabled" | awk -F: '{print $2}' | sed -e 's/ //g')
+
+      if [ $WEB_PROXY_ENABLED = "No" ] &amp;&amp; [ $SECURE_WEB_PROXY_ENABLED = "No" ]; then
+        echo "WebProxy and SecureWebProxy Off"
+      else
+        if [ $WEB_PROXY_ENABLED != "No" ]; then
+          echo "Turn WebProxy Off failed!"
+        fi
+        if [ $SECURE_WEB_PROXY_ENABLED != "No" ]; then
+          echo "Turn SecureWebProxy Off failed!"
+        fi
+      fi
+    else
+        echo "{query} is invalid action."
+    fi
+fi
+</string>
+				<key>type</key>
+				<integer>0</integer>
+			</dict>
+			<key>type</key>
+			<string>alfred.workflow.action.script</string>
+			<key>uid</key>
+			<string>AF7992A2-CCFA-446D-AC7E-665DBE603BF7</string>
+			<key>version</key>
+			<integer>0</integer>
+		</dict>
+	</array>
+	<key>readme</key>
+	<string></string>
+	<key>uidata</key>
+	<dict>
+		<key>46DE56A6-9D91-4CFA-B396-9A35D01B9543</key>
+		<dict>
+			<key>ypos</key>
+			<real>60</real>
+		</dict>
+		<key>6C68D0BB-A89A-4FDD-BB99-B5A5B460646E</key>
+		<dict>
+			<key>ypos</key>
+			<real>60</real>
+		</dict>
+		<key>AF7992A2-CCFA-446D-AC7E-665DBE603BF7</key>
+		<dict>
+			<key>ypos</key>
+			<real>60</real>
+		</dict>
+	</dict>
+	<key>webaddress</key>
+	<string></string>
+</dict>
+</plist>
